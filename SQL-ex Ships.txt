@@ -1,0 +1,229 @@
+========================================================================================================
+
+Short database description "Ships":
+
+The database of naval ships that took part in World War II is under consideration.
+The database consists of the following relations:
+
+- Classes(class, type, country, numGuns, bore, displacement)
+- Ships(name, class, launched)
+- Battles(name, date)
+- Outcomes(ship, battle, result)
+
+Ships in classes all have the same general design.
+A class is normally assigned either the name of the first ship built according to the corresponding design,
+or a name that is different from any ship name in the database.
+The ship whose name is assigned to a class is called a lead ship.
+
+The Classes relation includes:
+- name of the class
+- type (can be either bb for a battle ship, or bc for a battle cruiser)
+- country the ship was built in
+- the number of main guns
+- gun caliber (bore diameter in inches)
+- displacement (weight in tons).
+
+The Ships relation holds information about:
+- ship name
+- name of its corresponding class
+- year the ship was launched.
+
+The Battles relation contains:
+- names
+- dates of battles the ships participated in
+
+Outcomes relation - the battle result for a given ship (may be sunk, damaged, or OK, the last value meaning the ship survived the battle unharmed).
+
+Notes:
+1) The Outcomes relation may contain ships not present in the Ships relation.
+2) A ship sunk can’t participate in later battles.
+3) For historical reasons, lead ships are referred to as head ships in many exercises.
+4) A ship found in the Outcomes table but not in the Ships table is still considered in the database. This is true even if it is sunk.
+
+Source: https://www.sql-ex.ru/learn_exercises.php
+Database Schema: https://www.sql-ex.ru/help/select13.php#db_3
+
+========================================================================================================
+
+Exercise: 14 
+For the ships in the Ships table that have at least 10 guns, get the class, name, and country.
+
+1v
+SELECT Ships.class, Ships.name, Classes.country
+FROM Ships, Classes
+WHERE Classes.class = Ships.class
+AND Classes.numGuns >=10;
+
+2v
+SELECT Ships.class, Ships.name, Classes.country
+FROM Ships
+JOIN Classes
+ON Classes.class = Ships.class
+WHERE Classes.numGuns >=10;
+
+--------------------------------------------------------------------------------------------------------
+
+Exercise: 31
+For ship classes with a gun caliber of 16 in. or more, display the class and the country.
+
+SELECT class, country 
+FROM Classes
+WHERE bore >= 16;
+
+--------------------------------------------------------------------------------------------------------
+
+Exercise: 34 
+In accordance with the Washington Naval Treaty concluded in the beginning of 1922, it was prohibited to build battle ships with a displacement of more than 35 thousand tons.
+Get the ships violating this treaty (only consider ships for which the year of launch is known).
+List the names of the ships.
+
+SELECT name 
+FROM Ships
+JOIN Classes
+ON Ships.class = Classes.class
+WHERE launched >= 1922
+AND displacement > 35000
+AND type = 'bb';
+
+--------------------------------------------------------------------------------------------------------
+
+Exercise: 36 
+List the names of lead ships in the database (including the Outcomes table).
+
+SELECT name
+FROM Ships, Classes
+WHERE Ships.class = Classes.class
+AND Classes.class = Ships.name
+UNION
+SELECT ship
+FROM Outcomes, Classes
+WHERE Outcomes.ship = Classes.class;
+
+--------------------------------------------------------------------------------------------------------
+
+Exercise: 38 
+Find countries that ever had classes of both battleships (‘bb’) and cruisers (‘bc’).
+
+SELECT country 
+FROM Classes
+WHERE type = 'bb'
+Intersect
+SELECT country 
+FROM Classes
+WHERE type = 'bc';
+
+--------------------------------------------------------------------------------------------------------
+
+Exercise: 39 
+Find the ships that `survived for future battles`; that is, after being damaged in a battle, they participated in another one, which occurred later.
+
+SELECT DISTINCT o.ship
+FROM Outcomes o, Battles b
+WHERE o.battle = b.name
+AND result = 'damaged'
+AND Ship IN
+(SELECT ship
+FROM Outcomes, Battles
+WHERE Outcomes.battle = Battles.name
+AND b.[date] < Battles.[date]);
+
+--------------------------------------------------------------------------------------------------------
+
+Find the names of ships sunk at battles, along with the names of the corresponding battles.
+
+SELECT ship, battle
+FROM Outcomes
+WHERE result  = 'sunk';
+
+--------------------------------------------------------------------------------------------------------
+
+Exercise: 44
+Find all ship names beginning with the letter R.
+
+SELECT name
+FROM Ships
+WHERE name LIKE('R%')
+UNION
+SELECT ship
+FROM Outcomes
+WHERE ship LIKE('R%');
+
+--------------------------------------------------------------------------------------------------------
+Exercise: 45
+Find all ship names consisting of three or more words (e.g., King George V).
+Consider the words in ship names to be separated by single spaces, and the ship names to have no leading or trailing spaces.
+
+SELECT name
+FROM Ships
+WHERE name LIKE('% % %')
+UNION
+SELECT ship
+FROM Outcomes
+WHERE ship LIKE('% % %');
+
+--------------------------------------------------------------------------------------------------------
+
+Exercise: 48
+Find the ship classes having at least one ship sunk in battles.
+
+1v
+SELECT Classes.class
+FROM Classes, Outcomes
+WHERE Classes.class = Outcomes.ship
+AND Outcomes.result = 'sunk'
+UNION
+SELECT Classes.class
+FROM Classes, Ships
+WHERE Classes.class = Ships.class
+AND Ships.name IN (SELECT ship FROM Outcomes WHERE result = 'sunk');
+
+2v
+SELECT class
+FROM Classes
+WHERE class IN (SELECT ship FROM Outcomes WHERE result = 'sunk')
+UNION
+SELECT Classes.class
+FROM Classes, Ships
+WHERE Classes.class = Ships.class
+AND Ships.name IN (SELECT ship FROM Outcomes WHERE result = 'sunk');
+
+--------------------------------------------------------------------------------------------------------
+
+Exercise: 49
+Find the names of the ships having a gun caliber of 16 inches (including ships in the Outcomes table).
+
+SELECT Ships.name
+FROM Ships, Classes
+WHERE Ships.class = Classes.class
+AND Classes.bore = 16
+UNION
+SELECT Outcomes.ship name
+FROM Outcomes, Classes
+WHERE Outcomes.ship = Classes.class
+AND Classes.bore = 16;
+
+--------------------------------------------------------------------------------------------------------
+
+Exercise: 50
+Find the battles in which Kongo-class ships from the Ships table were engaged.
+
+SELECT DISTINCT battle
+FROM Outcomes
+WHERE ship IN (SELECT name FROM Ships WHERE class = 'Kongo');
+
+--------------------------------------------------------------------------------------------------------
+
+Exercise: 55
+For each class, determine the year the first ship of this class was launched.
+If the lead ship’s year of launch is not known, get the minimum year of launch for the ships of this class.
+Result set: class, year.
+
+SELECT class, MIN(launched)
+FROM
+(SELECT Classes.class, Ships.launched
+FROM Classes
+LEFT JOIN Ships
+ON Classes.class = Ships.class) "table 1"
+GROUP BY class;
+
+--------------------------------------------------------------------------------------------------------
