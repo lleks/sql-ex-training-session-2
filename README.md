@@ -1,4 +1,4 @@
-# SQL training session from sql-ex.ru, "SHIPS" db
+## SQL training session from sql-ex.ru, "SHIPS" db
 
 Short database description "Ships":
 
